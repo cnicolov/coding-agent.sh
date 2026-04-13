@@ -142,6 +142,13 @@ PROMPT
 # Conversation state (JSON array)
 CONVERSATION="[]"
 
+# Seed initial context so the agent knows the current directory contents on start
+seed_initial_context() {
+    local initial_context
+    initial_context=$(tool_list_files ".")
+    add_message "user" "tool_result($initial_context)"
+}
+
 # Add message to conversation
 add_message() {
     local role="$1"
@@ -358,6 +365,8 @@ main() {
     echo "Bash Coding Agent (model: $MODEL)"
     echo "Type 'exit' or Ctrl+C to quit"
     echo ""
+
+    seed_initial_context
     
     while true; do
         # Get user input
