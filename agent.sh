@@ -85,6 +85,28 @@ tool: edit_file({"path": "hello.py", "old_str": "", "new_str": "def hello():\n  
 Example (edit):
 tool: edit_file({"path": "hello.py", "old_str": "print(\"Hello World\")", "new_str": "print(\"Hello, World!\")"})
 
+## bash
+Execute a shell command and return its output.
+
+Parameters:
+- command (string, required): The shell command to execute.
+- timeout (number, optional): Timeout in seconds. Default: 30.
+
+Returns: JSON object with exit_code, stdout, and stderr fields.
+
+Usage notes:
+- Use for running builds, tests, git commands, installing packages, etc.
+- Commands run in the current working directory
+- Stderr and stdout are captured separately
+- Long-running commands will be killed after timeout
+- Be careful with destructive commands - prefer reversible operations
+- Do NOT use for file operations (use read_file, edit_file instead)
+
+Example:
+tool: bash({"command": "python hello.py"})
+tool: bash({"command": "npm install && npm test"})
+tool: bash({"command": "git status"})
+
 # Guidelines
 
 1. EXPLORE FIRST: Before editing, understand the codebase. Use list_files and read_file to gather context.
@@ -240,6 +262,42 @@ tool_edit_file() {
     fi
 }
 
+tool_bash() {
+    local command="$1"
+    local timeout_secs="${2:-30}"
+    
+    local stdout stderr exit_code
+    
+    # Create temp files for output
+    local stdout_file stderr_file
+    stdout_file=$(mktemp)
+    stderr_file=$(mktemp)
+    trap "rm -f '$stdout_file' '$stderr_file'" RETURN
+    
+    # Run command with timeout
+    set +e
+    timeout "$timeout_secs" bash -c "$command" > "$stdout_file" 2> "$stderr_file"
+    exit_code=$?
+    set -e
+    
+    stdout=$(cat "$stdout_file")
+    stderr=$(cat "$stderr_file")
+    
+    # Truncate if too long
+    if [[ ${#stdout} -gt 10000 ]]; then
+        stdout="${stdout:0:10000}... (truncated)"
+    fi
+    if [[ ${#stderr} -gt 5000 ]]; then
+        stderr="${stderr:0:5000}... (truncated)"
+    fi
+    
+    jq -n \
+        --argjson exit_code "$exit_code" \
+        --arg stdout "$stdout" \
+        --arg stderr "$stderr" \
+        '{exit_code: $exit_code, stdout: $stdout, stderr: $stderr}'
+}
+
 # ==================== TOOL PARSER ====================
 
 # Extract tool call from response
@@ -281,6 +339,12 @@ execute_tool() {
             old_str=$(echo "$args_json" | jq -r '.old_str')
             new_str=$(echo "$args_json" | jq -r '.new_str')
             tool_edit_file "$path" "$old_str" "$new_str"
+            ;;
+        bash)
+            local command timeout_secs
+            command=$(echo "$args_json" | jq -r '.command')
+            timeout_secs=$(echo "$args_json" | jq -r '.timeout // 30')
+            tool_bash "$command" "$timeout_secs"
             ;;
         *)
             echo "{\"error\": \"Unknown tool: $name\"}"
