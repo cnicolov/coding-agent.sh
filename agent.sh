@@ -9,7 +9,7 @@ RESET="\033[0m"
 
 # Config
 OPENAI_API_URL="https://api.openai.com/v1/chat/completions"
-MODEL="${OPENAI_MODEL:-gpt-4o}"
+MODEL="${OPENAI_MODEL:-gpt-5.4}"
 
 [[ -z "${OPENAI_API_KEY:-}" ]] && { echo "Error: OPENAI_API_KEY not set"; exit 1; }
 
