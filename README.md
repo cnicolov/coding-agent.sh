@@ -53,6 +53,7 @@ Assistant: Added a goodbye function to hello.py.
 | `read_file(path)` | Read contents of a file |
 | `list_files(path)` | List directory contents |
 | `edit_file(path, old_str, new_str)` | Create file (empty old_str) or find/replace edit |
+| `bash(command, timeout?)` | Execute shell command, return stdout/stderr/exit_code |
 
 ## How It Works
 
@@ -72,7 +73,7 @@ Add more tools by:
 2. Adding it to the `execute_tool()` case statement
 3. Documenting it in `SYSTEM_PROMPT`
 
-Ideas: `bash` (run commands), `grep` (search code), `glob` (find files), `web_fetch` (read URLs)
+Ideas: `grep` (search code), `glob` (find files), `web_fetch` (read URLs)
 
 ## License
 
